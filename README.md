@@ -90,7 +90,7 @@ This project is licensed under the MIT License.
 ---
 
 ### Contributors
-- **Your Name** (@davidabacon)
+- @davidabacon 
 - Contributions welcome! Feel free to submit pull requests.
 
 ---

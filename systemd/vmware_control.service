@@ -1,0 +1,14 @@
+[Unit]
+Description=VMware Workstation Web Control Service
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/vmware-control
+ExecStart=/usr/bin/python3 /opt/vmware-control/vmware_web_control.py
+Restart=always
+Environment=FLASK_RUN_PORT=15000
+
+[Install]
+WantedBy=multi-user.target
+

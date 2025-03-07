@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMware Workstation Control</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // Function to toggle columns visibility and save it to localStorage
+    function toggleColumn(columnIndex) {
+        const column = document.querySelectorAll("table tbody tr td:nth-child(" + (columnIndex + 1) + ")");
+        const header = document.querySelectorAll("table thead th:nth-child(" + (columnIndex + 1) + ")");
+        
+        column.forEach(cell => cell.classList.toggle('d-none'));
+        header.forEach(cell => cell.classList.toggle('d-none'));
+
+        // Save the visibility state of the columns to localStorage
+        let columnVisibility = JSON.parse(localStorage.getItem('columnVisibility')) || {};
+        columnVisibility[columnIndex] = !header[0].classList.contains('d-none');
+        localStorage.setItem('columnVisibility', JSON.stringify(columnVisibility));
+    }
+
+    function toggleColumnChooser() {
+    const chooser = document.getElementById("columnChooser");
+    chooser.classList.toggle("d-none");  // Show or hide the chooser
+}
+
+    // Function to apply saved column visibility states
+    function applyColumnVisibility() {
+    let columnVisibility = JSON.parse(localStorage.getItem('columnVisibility')) || {};
+
+    document.querySelectorAll("table thead th").forEach((header, index) => {
+        const isVisible = columnVisibility[index] !== false; // Default to visible
+        if (!isVisible) {
+            header.classList.add('d-none');
+            document.querySelectorAll("table tbody tr td:nth-child(" + (index + 1) + ")").forEach(cell => cell.classList.add('d-none'));
+        }
+        // Update the corresponding checkbox
+        const checkbox = document.getElementById(`column-${index}`);
+        if (checkbox) {
+            checkbox.checked = isVisible;
+        }
+    });
+}
+
+
+    // Function to change the folder
+    function changeFolder() {
+        let folder = document.getElementById("folderInput").value;
+        fetch("/set_folder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: folder })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Folder updated successfully to: " + data.new_folder);
+                location.reload();  // Reload the page to reflect changes
+            } else {
+                alert("Error updating folder: " + data.error);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Failed to update folder.");
+        });
+    }
+
+    // Function to sort the table by column
+    function sortTable(columnIndex) {
+        const table = document.querySelector("table tbody");
+        const rows = Array.from(table.rows);
+        const isAscending = table.dataset.sortDirection === "asc";
+        
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[columnIndex].textContent.trim();
+            const cellB = rowB.cells[columnIndex].textContent.trim();
+            if (cellA < cellB) return isAscending ? -1 : 1;
+            if (cellA > cellB) return isAscending ? 1 : -1;
+            return 0;
+        });
+
+        // Toggle sorting direction
+        table.dataset.sortDirection = isAscending ? "desc" : "asc";
+        rows.forEach(row => table.appendChild(row));
+
+        // Update sort arrows
+        updateSortArrows(columnIndex, isAscending);
+    }
+
+    // Function to update the sorting arrows for columns
+    function updateSortArrows(columnIndex, isAscending) {
+        const headers = document.querySelectorAll("table thead th");
+        headers.forEach(header => header.innerHTML = header.innerHTML.replace(/[\u2191\u2193]/g, ''));  // Remove previous arrows
+
+        const arrow = isAscending ? ' &#x2191;' : ' &#x2193;';
+        headers[columnIndex].innerHTML += arrow;
+    }
+
+    // Function to render the chart for VM statistics
+    function renderChart(runningCount, stoppedCount) {
+        const ctx = document.getElementById('statsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['VMs'],
+                datasets: [
+                {
+                    label: 'Running VMs',
+                    data: [runningCount],
+                    backgroundColor: '#28a745', // Green
+                    stack: 'Stack 1' // Assign to same stack
+                },
+                {
+                    label: 'Stopped VMs',
+                    data: [stoppedCount],
+                    backgroundColor: '#6c757d', // Gray
+                    stack: 'Stack 1' // Assign to same stack
+                }
+            ]
+            },
+	    options: {
+            indexAxis: 'y', // Horizontal bar chart
+	    }
+	})
+    }
+
+    function startVM(vmPath) {
+        fetch('/start_vm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vmx_path: vmPath })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('VM started successfully');
+                location.reload();  // Reload the page to reflect changes
+            } else {
+                alert('Error starting VM: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to start VM');
+        });
+    }
+
+    // Function to stop a VM (send POST request to backend)
+    function stopVM(vmPath) {
+        fetch('/stop_vm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vmx_path: vmPath })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('VM stopped successfully');
+                location.reload();  // Reload the page to reflect changes
+            } else {
+                alert('Error stopping VM: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to stop VM');
+        });
+    }
+
+    // On page load, apply the saved column visibility
+    window.onload = function() {
+        applyColumnVisibility();
+    };
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        .table {
+            color: white;
+        }
+        .form-control, .btn {
+            margin: 5px 0;
+        }
+        th {
+            cursor: pointer;
+        }
+        .column-chooser {
+            margin-bottom: 20px;
+        }
+        .statistics-card {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .folders-card {
+            margin-top: 20px;
+        }
+        canvas {
+            width: 30% !important;
+            height: 15% !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="text-center mb-4">VMware Workstation Control</h1>
+
+    <!-- Button to Toggle Column Chooser -->
+    <button class="btn btn-secondary mb-3" onclick="toggleColumnChooser()">Toggle Column Chooser</button>
+
+    <!-- Column Chooser -->
+    <div id="columnChooser" class="column-chooser d-none">
+        <h5>Select Columns to Display:</h5>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnVMName" checked onclick="toggleColumn(0)">
+            <label class="form-check-label" for="columnVMName">VM Name</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnPath" checked onclick="toggleColumn(1)">
+            <label class="form-check-label" for="columnPath">Path</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnStatus" checked onclick="toggleColumn(2)">
+            <label class="form-check-label" for="columnStatus">Status</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnOS" checked onclick="toggleColumn(3)">
+            <label class="form-check-label" for="columnOS">OS</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnCPU" checked onclick="toggleColumn(4)">
+            <label class="form-check-label" for="columnCPU">CPU</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnRAM" checked onclick="toggleColumn(5)">
+            <label class="form-check-label" for="columnRAM">RAM</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnIP" checked onclick="toggleColumn(6)">
+            <label class="form-check-label" for="columnIP">IP Address</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnDiskSize" checked onclick="toggleColumn(7)">
+            <label class="form-check-label" for="columnDiskSize">Disk Size</label>
+        </div>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="columnMacAddress" checked onclick="toggleColumn(8)">
+            <label class="form-check-label" for="columnMacAddress">Mac Address</label>
+        </div>
+    </div>
+
+    <!-- Statistics Section with a Chart -->
+    <div class="statistics-card">
+        <div class="card text-white bg-dark">
+            <div class="card-header">
+                <h5>VM Statistics</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <h3>Currently Running VMs</h3>
+    <table class="table table-dark table-striped">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">VM Name</th>
+                <th onclick="sortTable(1)">Path</th>
+                <th onclick="sortTable(2)">Status</th>
+                <th onclick="sortTable(3)">OS</th>
+                <th onclick="sortTable(4)">CPU</th>
+                <th onclick="sortTable(5)">RAM</th>
+                <th onclick="sortTable(6)">IP Address</th>
+                <th onclick="sortTable(7)">Disk Size</th>
+                <th onclick="sortTable(8)">Mac Address</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vm in vms %}
+            <tr>
+                <td>{{ vm.name }}</td>
+                <td>{{ vm.path }}</td>
+                <td>
+                    <span class="badge {% if vm.status == 'Running' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ vm.status }}
+                    </span>
+                </td>
+                <td>{{ vm.os }}</td>
+                <td>{{ vm.cpu }}</td>
+                <td>{{ vm.ram }}</td>
+                <td>{{ vm.ip }}</td>
+                <td>{{ vm.disk_size }}</td>
+                <td>{{ vm.mac_address }}</td>
+		<td>
+                   {% if vm.status == 'Stopped' %}
+                   <button class="btn btn-success btn-sm" onclick="startVM('{{ vm.path }}')">Start</button>
+                   {% elif vm.status == 'Running' %}
+                   <button class="btn btn-danger btn-sm" onclick="stopVM('{{ vm.path }}')">Stop</button>
+                   {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Running VM Folders Section at the Bottom -->
+    <div class="folders-card">
+        <div class="card text-white bg-dark">
+            <div class="card-header">
+                <h5>Running VM Folders</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for folder in running_folders %}
+                        <li class="list-group-item bg-dark text-white">{{ folder }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Initialize Pie Chart with data
+    renderChart({{ vms | selectattr('status', 'equalto', 'Running') | list | length }}, 
+                {{ vms | selectattr('status', 'equalto', 'Stopped') | list | length }});
+</script>
+
+</body>
+</html>
+

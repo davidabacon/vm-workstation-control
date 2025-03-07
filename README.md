@@ -2,6 +2,12 @@
 
 This project provides a web-based interface for managing VMware Workstation virtual machines. It scans for VMX files, extracts VM details, and allows users to start or stop VMs from a browser.
 
+I wrote this and then found that there is apparently something from VMware directly that I am sure must be better..
+I will be checking into WSX:  
+     https://knowledge.broadcom.com/external/article/310200/configuring-wsx-in-vmware-workstation.html
+Fun project nevertheless.
+
+
 ## Features
 
 - **Automatic VM Discovery**: Scans a specified folder for `.vmx` files.

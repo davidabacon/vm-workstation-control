@@ -16,6 +16,11 @@ Fun project nevertheless.
 - **Network Scanning**: Uses `nmap` to detect active IP addresses in a subnet.
 - **Web UI**: A Flask-powered web interface for managing VMs.
 
+## Screenshot
+
+![image](https://github.com/user-attachments/assets/c82db393-63f1-4576-aede-7dc4ddc94a6a)
+
+
 ## Installation
 
 ### Prerequisites
